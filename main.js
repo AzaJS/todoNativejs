@@ -21,6 +21,8 @@ const API = "http://localhost:8000/todos";
 let inpAdd = document.getElementById("inp-add");
 let btnAdd = document.getElementById("btn-add");
 
+let inpSearch = document.getElementById("inp-search");
+// console.log(inp);
 // console.log(inpAdd, btnAdd);
 
 // ! Create
@@ -53,8 +55,18 @@ btnAdd.addEventListener("click", async () => {
 });
 
 //? вызываем функцию, чтоб как только откроется страница что-то было отображено
+let page = 1;
 getTodos();
 
+// ! READ
+// ! Search
+inpSearch.addEventListener("input", () => {
+  // console.log("INPUT");
+  getTodos();
+});
+// ! Pagination
+let pagination = document.getElementById("pagination");
+// console.log(pagination);
 // получаем элемент, чтоб в нем отобразить все таски
 let list = document.getElementById("list");
 
@@ -62,10 +74,21 @@ let list = document.getElementById("list");
 
 // функция для получения всех тасков и отображения их в div#list
 // async await нужен здесь, чтоб при отправке запроса мы сначала получили данные и только потом записали все в переменную response, иначе (если мы НЕ дождемся) туда запишется pending (состояние промиса, который еще не выполнен)
+let limit = 3;
 async function getTodos() {
-  let response = await fetch(API)
+  let response = await fetch(
+    `${API}?q=${inpSearch.value}&_page=${page}&_limit=${limit}`
+  )
     // если не указать метод запроса, то по умолчанию это GET запрос
     .then((res) => res.json()); // переводим все в json формат
+
+  let allTodos = await fetch(API)
+    .then((res) => res.json())
+    .catch((e) => console.log(e));
+  // console.log(allTodos);
+
+  let lastPage = Math.ceil(allTodos.length / limit);
+  console.log(lastPage);
 
   //очищаем div#list, чтоб список тасков корректно отображался и не хранил там предыдущие html-элементы со старыми данными
   list.innerHTML = "";
@@ -76,12 +99,21 @@ async function getTodos() {
     newElem.id = item.id;
     newElem.innerHTML = `
         <span>${item.todo}</span>
-        <button class="btn-delete">Delete</button>
+        <button  class="btn-delete">Delete</button>
         <button class="btn-edit">Edit</button>
     `;
     list.append(newElem);
     // console.log(newElem);
   });
+
+  // добавляем пагинацию
+  pagination.innerHTML = `
+    <button ${page === 1 ? "disabled" : ""} id="btn-prev" >Назад</button>
+    <span>${page}</span>
+    <button ${
+      page === lastPage ? "disabled" : ""
+    } id="btn-next" >Вперед</button>
+  `;
 }
 
 document.addEventListener("click", async (e) => {
@@ -108,6 +140,16 @@ document.addEventListener("click", async (e) => {
 
     inpEditTodo.value = response.todo;
     inpEditTodo.className = response.id; // добавляем id тудушки в класс для того чтобы получить id  в другой функции
+  }
+
+  // ! Paginate
+  if (e.target.id === "btn-next") {
+    page++;
+    getTodos();
+  }
+  if (e.target.id === "btn-prev") {
+    page--;
+    getTodos();
   }
 });
 
